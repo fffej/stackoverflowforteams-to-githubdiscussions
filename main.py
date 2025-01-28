@@ -27,6 +27,13 @@ Example usage:
     
     return parser.parse_args()
 
+def get_qa_category_id(categories):
+    """Helper function to find the Q&A category ID."""
+    for category in categories["repository"]["discussionCategories"]["nodes"]:
+        if category['name'] == 'Q&A':
+            return category['id']
+    return None
+
 def main():
     args = parse_args()
     
@@ -41,6 +48,7 @@ def main():
                 
                 # Test the connection by getting repository information
                 repo_info = client.get_repository_id(owner, repo_name)
+                repo_id = repo_info["repository"]["id"]
                 print(f"Successfully connected to repository: {args.repo}")
                 
                 # Get and display available discussion categories
@@ -48,6 +56,20 @@ def main():
                 print("\nAvailable discussion categories:")
                 for category in categories["repository"]["discussionCategories"]["nodes"]:
                     print(f"- {category['name']}: {category['id']}")
+
+                # Get Q&A category ID
+                category_id = get_qa_category_id(categories)
+                if not category_id:
+                    print("Error: Could not find Q&A category in the repository")
+                    sys.exit(1)                    
+
+                result = client.create_discussion(
+                    repository_id=repo_id,
+                    category_id=category_id,
+                    title="Migration Test Discussion",
+                    body="This is a test discussion")   
+
+                print(f"\nSuccessfully created discussion: {result['createDiscussion']['discussion']['url']}")             
                     
             except ValueError:
                 print("Error: Repository should be in format 'owner/name'")
