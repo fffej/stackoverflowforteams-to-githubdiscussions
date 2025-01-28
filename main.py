@@ -1,7 +1,7 @@
 import argparse
 import sys
 from github_discussions_client import GitHubDiscussionsClient
-from stackoverflow_data_dump import load_stackoverflow_posts, load_stackoverflow_accounts
+from stackoverflow_data_dump import load_stackoverflow_posts, load_stackoverflow_accounts, load_stackoverflow_badges
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -45,6 +45,7 @@ def main():
         # Initialize the export data
         posts = load_stackoverflow_posts("data/posts.json")
         accounts = load_stackoverflow_accounts("data/accounts.json")
+        badges = load_stackoverflow_badges("data/badges.json")
 
         return
         

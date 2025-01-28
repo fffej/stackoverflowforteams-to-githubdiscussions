@@ -62,3 +62,38 @@ def load_stackoverflow_accounts(json_file_path: str) -> Dict[int, str]:
         accounts: List[Account] = json.load(file)
     
     return {account['accountId']: account['verifiedEmail'] for account in accounts}
+
+@dataclass
+class Badge:
+    isCode: bool
+    tagBased: bool
+    single: bool
+    awardedCount: int
+    id: int
+    badgeClass: str  # Simplified from enum to string
+    badgeReasonTypeId: str
+    awardFrequency: int
+    description: str
+    name: str
+
+def parse_badge(badge_dict: dict) -> Badge:
+    return Badge(
+        isCode=badge_dict["isCode"],
+        tagBased=badge_dict["tagBased"],
+        single=badge_dict["single"],
+        awardedCount=badge_dict["awardedCount"],
+        id=badge_dict["id"],
+        badgeClass=badge_dict["class"],
+        badgeReasonTypeId=badge_dict["badgeReasonTypeId"],
+        awardFrequency=badge_dict["awardFrequency"],
+        description=badge_dict["description"],
+        name=badge_dict["name"]
+    )
+
+def load_stackoverflow_badges(file_path: str) -> List[Badge]:
+    """"
+    Reads a JSON file containing badge information and returns a list of Badge objects.
+    """
+    with open(file_path, 'r') as file:
+        data = json.load(file)
+        return [parse_badge(badge_dict) for badge_dict in data]
