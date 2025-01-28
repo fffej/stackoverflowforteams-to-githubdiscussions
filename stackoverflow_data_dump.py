@@ -222,3 +222,44 @@ def load_stackoverflow_users(file_path: str) -> List[UserProfile]:
             profiles.append(profile)
         
         return profiles
+    
+@dataclass
+class StackOverflowTag:
+    """Represents a StackOverflow tag with its associated metadata."""
+    id: int
+    name: str
+    count: int
+    is_special_tag: bool
+    creation_date: datetime    
+    excerpt_post_id: int | None = None
+    wiki_post_id: int | None = None
+
+def load_stackoverflow_tags(file_path: str) -> List[StackOverflowTag]:
+    try:
+        with open(file_path, 'r') as f:
+            tags_data = json.load(f)
+
+        tags = []
+        for tag_data in tags_data:
+            # Convert camelCase to snake_case for Python conventions
+            tag = StackOverflowTag(
+                id=tag_data['id'],
+                name=tag_data['name'],
+                count=tag_data['count'],
+                is_special_tag=tag_data['isSpecialTag'],
+                creation_date=datetime.fromisoformat(tag_data['creationDate'].replace('Z', '+00:00')),
+                wiki_post_id=tag_data.get('wikiPostId'),
+                excerpt_post_id=tag_data.get('excerptPostId')
+            )
+            tags.append(tag)
+
+        return tags
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The file {file_path} was not found.")
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Invalid JSON in file {file_path}: {str(e)}", e.doc, e.pos)
+    except KeyError as e:
+        raise KeyError(f"Missing required field in JSON data: {str(e)}")
+    except ValueError as e:
+        raise ValueError(f"Invalid data format in JSON: {str(e)}")        

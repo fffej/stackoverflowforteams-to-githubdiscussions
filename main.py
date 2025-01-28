@@ -49,6 +49,7 @@ def main():
         comments = load_stackoverflow_comments("data/comments.json")
         images = load_stackoverflow_images("data/images.json")
         users = load_stackoverflow_users("data/users.json")
+        tags = load_stackoverflow_tags("data/tags.json")
 
         return
         
