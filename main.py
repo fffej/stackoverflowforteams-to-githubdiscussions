@@ -62,12 +62,6 @@ def main():
         users = load_stackoverflow_users("data/users.json")
         tags = load_stackoverflow_tags("data/tags.json")
 
-        print("Unique post types:")
-        for post_type in sorted(set(post.postType for post in posts)):
-            print(f"- {post_type}")
-
-        # Stage 0 - do some rate limiting
-
         # Stage 1
         # For every question, create a discussion adding relevant answers as comments with GitHub Discussions API
         discussion_tokens = {}
@@ -76,11 +70,15 @@ def main():
             if post.postType == "question":
                 print(f"\nProcessing question: {post.title}")   
 
+                attribution = ""
+                if post.ownerUserId != -1:
+                    attribution = f"Written by {users[post.ownerUserId].displayName})\n"
+                
                 result = client.create_discussion(
                     repository_id=repo_id,
                     category_id=category_id,
                     title=post.title,
-                    body=post.bodyMarkdown)   
+                    body=attribution + post.bodyMarkdown)   
                 discussion_tokens[post.id] = result
 
 
