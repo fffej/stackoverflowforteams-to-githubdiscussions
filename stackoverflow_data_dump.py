@@ -97,3 +97,61 @@ def load_stackoverflow_badges(file_path: str) -> List[Badge]:
     with open(file_path, 'r') as file:
         data = json.load(file)
         return [parse_badge(badge_dict) for badge_dict in data]
+
+@dataclass
+class Comment:
+    # Required fields
+    id: int
+    creationDate: datetime     
+    postId: int 
+    postCommentTypeId: str     
+    userId: int 
+    text: str
+    replyToUserId: int
+    editCount: int
+    score: int
+
+def load_stackoverflow_comments(filename: str) -> List[Comment]:
+    """
+    Parse comments from a JSON file into a list of strongly typed Comment objects
+    
+    Args:
+        filename: Path to the JSON file containing comment data
+        
+    Returns:
+        List of Comment objects
+    """
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            comments_data = json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"Could not find file: {filename}")
+    except json.JSONDecodeError:
+        raise ValueError(f"Invalid JSON in file: {filename}")
+    
+    comments = []
+    
+    for data in comments_data:
+        # Convert ISO format string to datetime if present
+        creation_date = None
+        if 'creationDate' in data and data['creationDate']:
+            try:
+                creation_date = datetime.fromisoformat(data['creationDate'].replace('Z', '+00:00'))
+            except (ValueError, TypeError):
+                pass
+        
+        # Create Comment object with all fields optional except id
+        comment = Comment(
+            id=data['id'],
+            creationDate=creation_date,
+            editCount=data.get('editCount'),
+            postId=data.get('postId'),
+            postCommentTypeId=data.get('postCommentTypeId'),
+            score=data.get('score'),
+            userId=data.get('userId'),
+            text=data.get('text', ''),
+            replyToUserId=data.get('replyToUserId')
+        )
+        comments.append(comment)
+    
+    return comments
