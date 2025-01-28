@@ -179,3 +179,46 @@ def load_stackoverflow_images(file_path: str) -> List[ImageRecord]:
         raise Exception(f"Invalid JSON format: {str(e)}")
     except Exception as e:
         raise Exception(f"Error processing file: {str(e)}")
+
+@dataclass
+class UserProfile:
+    id: int
+    accountId: int
+    userTypeId: str
+    displayName: str
+    realName: str
+    profileImageUrl: str
+    reputation: int
+    views: int
+    answerCount: int
+    questionCount: int
+    goldBadges: int
+    silverBadges: int
+    bronzeBadges: int
+    lastAccessDate: datetime
+    creationDate: datetime    
+    lastLoginDate: datetime
+    location: Optional[str] = None
+    title: Optional[str] = None
+    lastModifiedDate: Optional[datetime] = None
+
+def load_stackoverflow_users(file_path: str) -> List[UserProfile]:
+    """
+    Convert JSON data into a list of UserProfile objects.
+    Handles datetime parsing and optional fields.
+    """
+    with open(file_path, 'r') as file:
+        json_data = json.load(file)
+        profiles = []
+        for data in json_data:
+            # Convert ISO datetime strings to datetime objects
+            datetime_fields = ['lastAccessDate', 'creationDate', 'lastModifiedDate', 'lastLoginDate']
+            for field in datetime_fields:
+                if field in data:
+                    data[field] = datetime.fromisoformat(data[field].replace('Z', '+00:00'))
+            
+            # Create UserProfile object with unpacked dictionary
+            profile = UserProfile(**data)
+            profiles.append(profile)
+        
+        return profiles

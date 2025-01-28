@@ -48,6 +48,7 @@ def main():
         badges = load_stackoverflow_badges("data/badges.json")
         comments = load_stackoverflow_comments("data/comments.json")
         images = load_stackoverflow_images("data/images.json")
+        users = load_stackoverflow_users("data/users.json")
 
         return
         
