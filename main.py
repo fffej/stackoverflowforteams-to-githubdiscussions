@@ -41,6 +41,17 @@ def main():
     try:
         # Initialize the client with the provided token
         client = GitHubDiscussionsClient(args.token)
+        owner, repo_name = args.repo.split('/')
+        repo_info = client.get_repository_id(owner, repo_name)
+        repo_id = repo_info["repository"]["id"]
+        print(f"Successfully connected to repository: {args.repo}")
+        
+        # Find the Q&A discussion category ID
+        categories = client.get_discussion_categories(owner, repo_name)
+        category_id = get_qa_category_id(categories)
+        if not category_id:
+            print("Error: Could not find Q&A category in the repository")
+            sys.exit(1)       
 
         # Initialize the export data
         posts = load_stackoverflow_posts("data/posts.json")
@@ -50,6 +61,43 @@ def main():
         images = load_stackoverflow_images("data/images.json")
         users = load_stackoverflow_users("data/users.json")
         tags = load_stackoverflow_tags("data/tags.json")
+
+        print("Unique post types:")
+        for post_type in sorted(set(post.postType for post in posts)):
+            print(f"- {post_type}")
+
+        # Stage 0 - do some rate limiting
+
+        # Stage 1
+        # For every question, create a discussion adding relevant answers as comments with GitHub Discussions API
+        discussion_tokens = {}
+
+        for post in posts:
+            if post.postType == "question":
+                print(f"\nProcessing question: {post.title}")   
+
+                result = client.create_discussion(
+                    repository_id=repo_id,
+                    category_id=category_id,
+                    title=post.title,
+                    body=post.bodyMarkdown)   
+                discussion_tokens[post.id] = result
+
+
+            elif post.postType == "answer":
+                parent_discussion = discussion_tokens.get(post.parentId)
+                if parent_discussion is None:
+                    print(f"Error: Answer {post.id} has no parent discussion") 
+                client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)
+                
+                
+        # Stage 2
+        for post in posts:
+            if post.postType == "article":
+                print(f"\nProcessing article: {post.title}")
+
+        # Assumption (tagWki and takWikiExcerpt contain little value)
+        # What about collection?
 
         return
         
