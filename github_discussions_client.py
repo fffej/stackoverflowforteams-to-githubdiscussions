@@ -96,29 +96,3 @@ class GitHubDiscussionsClient:
         }
         
         return self.client.execute(mutation, variable_values=variables)
-
-# Example usage:
-if __name__ == "__main__":
-    # Initialize client with your GitHub token
-    token = os.getenv("GITHUB_TOKEN")
-    client = GitHubDiscussionsClient(token)
-    
-    # Get repository ID
-    repo_info = client.get_repository_id("owner", "repo-name")
-    repo_id = repo_info["repository"]["id"]
-    
-    # Get discussion categories
-    categories = client.get_discussion_categories("owner", "repo-name")
-    category_id = categories["repository"]["discussionCategories"]["nodes"][0]["id"]
-    
-    # Create a new discussion
-    result = client.create_discussion(
-        repository_id=repo_id,
-        category_id=category_id,
-        title="Migration Test Discussion",
-        body="This is a test discussion created via GraphQL"
-    )
-    
-    # Add a comment to the discussion
-    discussion_id = result["createDiscussion"]["discussion"]["id"]
-    client.create_comment(discussion_id, "This is a test comment")
