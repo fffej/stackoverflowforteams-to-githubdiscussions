@@ -1,10 +1,11 @@
 import argparse
 import sys
 from github_discussions_client import GitHubDiscussionsClient
+from stackoverflow_data_dump import load_stackoverflow_posts
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='GitHub Discussions Migration Tool',
+        description='GitHub Discussions Migration Tool. Assumes there is a data/ directory with Stack Overflow data dump.',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example usage:
@@ -40,6 +41,10 @@ def main():
     try:
         # Initialize the client with the provided token
         client = GitHubDiscussionsClient(args.token)
+
+        # Initialize the export data
+        posts = load_stackoverflow_posts("data/posts.json")
+
         
         # If a repository is specified, get its information
         if args.repo:
