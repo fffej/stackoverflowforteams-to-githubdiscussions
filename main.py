@@ -1,7 +1,7 @@
 import argparse
 import sys
 from github_discussions_client import GitHubDiscussionsClient
-from stackoverflow_data_dump import load_stackoverflow_posts, load_stackoverflow_accounts, load_stackoverflow_badges, load_stackoverflow_comments
+from stackoverflow_data_dump import *
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -47,6 +47,7 @@ def main():
         accounts = load_stackoverflow_accounts("data/accounts.json")
         badges = load_stackoverflow_badges("data/badges.json")
         comments = load_stackoverflow_comments("data/comments.json")
+        images = load_stackoverflow_images("data/images.json")
 
         return
         

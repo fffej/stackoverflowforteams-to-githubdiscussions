@@ -155,3 +155,27 @@ def load_stackoverflow_comments(filename: str) -> List[Comment]:
         comments.append(comment)
     
     return comments
+
+@dataclass
+class ImageRecord:
+    creationDate: datetime
+    imageGuid: str
+    id: int
+
+    def __post_init__(self):
+        # Convert string to datetime if it's not already a datetime object
+        if isinstance(self.creationDate, str):
+            self.creationDate = datetime.fromisoformat(self.creationDate.replace('Z', '+00:00'))
+
+
+
+def load_stackoverflow_images(file_path: str) -> List[ImageRecord]:
+    try:
+        with open(file_path, 'r') as file:
+            json_data = json.load(file)
+            # Convert JSON data into list of ImageRecord objects
+            return [ImageRecord(**record) for record in json_data]
+    except json.JSONDecodeError as e:
+        raise Exception(f"Invalid JSON format: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Error processing file: {str(e)}")
