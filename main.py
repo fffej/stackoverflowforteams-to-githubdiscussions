@@ -65,6 +65,7 @@ def main():
         # Stage 1
         # For every question, create a discussion adding relevant answers as comments with GitHub Discussions API
         discussion_tokens = {}
+        answer_ids = {}
 
         for post in posts:
             if post.postType == "question":
@@ -79,15 +80,17 @@ def main():
                     category_id=category_id,
                     title=post.title,
                     body=attribution + post.bodyMarkdown)   
-                discussion_tokens[post.id] = result
+                discussion_tokens[post.id] = result     
 
+                if post.acceptedAnswerId > 0:
+                    answer_ids[post.id] = post.acceptedAnswerId
 
             elif post.postType == "answer":
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
-                client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)
-                
+                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)
+               
                 
         # Stage 2
         for post in posts:
