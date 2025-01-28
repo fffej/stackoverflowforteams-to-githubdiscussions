@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 import json
-from typing import List, Optional
+from typing import List, Optional, TypedDict, Dict
 
 @dataclass
 class StackOverflowPost:
@@ -47,3 +47,18 @@ def load_stackoverflow_posts(file_path: str) -> List[StackOverflowPost]:
     with open(file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     return [StackOverflowPost.from_dict(post) for post in data]
+
+class Account(TypedDict):
+    accountId: int
+    verifiedEmail: str
+
+def load_stackoverflow_accounts(json_file_path: str) -> Dict[int, str]:
+    """
+    Reads a JSON file containing account information and returns a mapping of account IDs to emails.       
+    Returns:
+        Dict[int, str]: Dictionary mapping account IDs (int) to email addresses (str)
+    """
+    with open(json_file_path, 'r') as file:
+        accounts: List[Account] = json.load(file)
+    
+    return {account['accountId']: account['verifiedEmail'] for account in accounts}

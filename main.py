@@ -1,7 +1,7 @@
 import argparse
 import sys
 from github_discussions_client import GitHubDiscussionsClient
-from stackoverflow_data_dump import load_stackoverflow_posts
+from stackoverflow_data_dump import load_stackoverflow_posts, load_stackoverflow_accounts
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -44,7 +44,9 @@ def main():
 
         # Initialize the export data
         posts = load_stackoverflow_posts("data/posts.json")
+        accounts = load_stackoverflow_accounts("data/accounts.json")
 
+        return
         
         # If a repository is specified, get its information
         if args.repo:
