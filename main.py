@@ -89,12 +89,9 @@ def main():
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
-                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)               
-                
-        # Stage 2
-        for post in posts:
-            if post.postType == "article":
-                print(f"\nProcessing article: {post.title}")
+                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)  
+            elif post.postType == "article":
+                print(f"Skipping article: {post.title}")             
 
         # Assumption (tagWki and takWikiExcerpt contain little value)
         # What about collection?
