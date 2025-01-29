@@ -21,7 +21,6 @@ class GitHubDiscussionsClient:
     def _execute_query(self, query, variables=None):
         return self.client.execute(query, variable_values=variables)    
 
-
     def create_discussion(self, repository_id, category_id, title, body):
         """Create a new discussion in the specified repository."""
         mutation = gql("""
@@ -44,7 +43,7 @@ class GitHubDiscussionsClient:
             }
         }
         
-        return self._execute_query(mutation, variable_values=variables)
+        return self._execute_query(mutation, variables=variables)
 
     def get_discussion_categories(self, owner, name):
         """Get available discussion categories for a repository."""
@@ -67,7 +66,7 @@ class GitHubDiscussionsClient:
             "name": name
         }
         
-        return self._execute_query(query, variable_values=variables)
+        return self._execute_query(query, variables=variables)
 
     def get_repository_id(self, owner, name):
         """Get the GitHub repository ID."""
@@ -84,10 +83,20 @@ class GitHubDiscussionsClient:
             "name": name
         }
         
-        return self._execute_query(query, variable_values=variables)
+        return self._execute_query(query, variables=variables)
 
-    def create_comment(self, discussion_id, body):
-        """Add a comment to an existing discussion."""
+    def create_comment(self, discussion_id, body, is_answer=False):
+        """
+        Add a comment to an existing discussion.
+        
+        Args:
+            discussion_id (str): The ID of the discussion to comment on
+            body (str): The content of the comment
+            is_answer (bool, optional): Whether this comment should be marked as the answer. Defaults to False.
+        
+        Returns:
+            dict: Response containing the created comment's information and success status
+        """
         mutation = gql("""
             mutation AddDiscussionComment($input: AddDiscussionCommentInput!) {
                 addDiscussionComment(input: $input) {
@@ -106,4 +115,28 @@ class GitHubDiscussionsClient:
             }
         }
         
-        return self._execute_query(mutation, variable_values=variables)
+        # Create the comment first
+        result = self._execute_query(mutation, variables=variables)
+        
+        # If this comment should be marked as the answer, make a second call
+        if is_answer and result.get('addDiscussionComment', {}).get('comment', {}).get('id'):
+            mark_answer_mutation = gql("""
+                mutation MarkDiscussionCommentAsAnswer($input: MarkDiscussionCommentAsAnswerInput!) {
+                    markDiscussionCommentAsAnswer(input: $input) {
+                        discussion {
+                            id
+                        }
+                    }
+                }
+            """)
+            
+            mark_variables = {
+                "input": {
+                    "id": result['addDiscussionComment']['comment']['id']
+                }
+            }
+            
+            # Mark the comment as the answer
+            self._execute_query(mark_answer_mutation, variables=mark_variables)
+        
+        return result

@@ -89,7 +89,7 @@ def main():
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
-                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)  
+                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown, answer_ids.get(post.parentId,-1) == post.id)  
             elif post.postType == "article":
                 print(f"Skipping article: {post.title}")             
 
