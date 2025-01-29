@@ -48,8 +48,8 @@ def main():
         
         # Find the Q&A discussion category ID
         categories = client.get_discussion_categories(owner, repo_name)
-        category_id = get_qa_category_id(categories)
-        if not category_id:
+        qa_category_id = get_qa_category_id(categories)
+        if not qa_category_id:
             print("Error: Could not find Q&A category in the repository")
             sys.exit(1)       
 
@@ -77,7 +77,7 @@ def main():
                 
                 result = client.create_discussion(
                     repository_id=repo_id,
-                    category_id=category_id,
+                    category_id=qa_category_id,
                     title=post.title,
                     body=attribution + post.bodyMarkdown)   
                 discussion_tokens[post.id] = result     
@@ -89,8 +89,7 @@ def main():
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
-                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)
-               
+                result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown)               
                 
         # Stage 2
         for post in posts:
@@ -101,45 +100,6 @@ def main():
         # What about collection?
 
         return
-        
-        # If a repository is specified, get its information
-        if args.repo:
-            try:
-                owner, repo_name = args.repo.split('/')
-                
-                # Test the connection by getting repository information
-                repo_info = client.get_repository_id(owner, repo_name)
-                repo_id = repo_info["repository"]["id"]
-                print(f"Successfully connected to repository: {args.repo}")
-                
-                # Get and display available discussion categories
-                categories = client.get_discussion_categories(owner, repo_name)
-                print("\nAvailable discussion categories:")
-                for category in categories["repository"]["discussionCategories"]["nodes"]:
-                    print(f"- {category['name']}: {category['id']}")
-
-                # Get Q&A category ID
-                category_id = get_qa_category_id(categories)
-                if not category_id:
-                    print("Error: Could not find Q&A category in the repository")
-                    sys.exit(1)                    
-
-                result = client.create_discussion(
-                    repository_id=repo_id,
-                    category_id=category_id,
-                    title="Migration Test Discussion",
-                    body="This is a test discussion")   
-
-                print(f"\nSuccessfully created discussion: {result['createDiscussion']['discussion']['url']}")             
-                    
-            except ValueError:
-                print("Error: Repository should be in format 'owner/name'")
-                sys.exit(1)
-            except Exception as e:
-                print(f"Error accessing repository: {e}")
-                sys.exit(1)
-        else:
-            print("Successfully initialized client. Use --repo to specify a repository.")
             
     except Exception as e:
         print(f"Error initializing client: {e}")
