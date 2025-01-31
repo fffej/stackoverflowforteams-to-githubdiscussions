@@ -3,6 +3,7 @@ import sys
 from github_discussions_client import GitHubDiscussionsClient
 from stackoverflow_data_dump import *
 import traceback
+import re
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -44,8 +45,22 @@ def get_articles_category_id(categories):
     return None
 
 # Slow, but fine for small lists
-def find_user_by_id(owner: str, repo:str, users: list[UserProfile], user_id: int) -> Optional[UserProfile]:
+def find_user_by_id(users: list[UserProfile], user_id: int) -> Optional[UserProfile]:
     return next((user for user in users if user.id == user_id), None)
+
+# We make the assumption that the images are in the same repository
+# Replace image URLs, which means I need to find things like this
+# [![enter image description here](https://stackoverflowteams.com/c/XYZ/images/s/8505b790-b95e-44e9-b937-884d990f53c4.png)]
+# [![enter image description here](../blob/main/images/8505b790-b95e-44e9-b937-884d990f53c4.png?raw=true)]
+def rewrite_image_urls(markdown_text):
+   pattern = r'\(https://stackoverflowteams\.com/c/[^/]+/images/[^/]+/([a-f0-9-]+)\.png\)'
+   
+   # really?
+   def replace(match):
+       uuid = match.group(1).replace('-', '')
+       return f'(../blob/main/images/{uuid}.png?raw=true)'
+   
+   return re.sub(pattern, replace, markdown_text)
 
 def main():
     args = parse_args()
@@ -99,7 +114,7 @@ def main():
                     repository_id=repo_id,
                     category_id=qa_category_id,
                     title=post.title,
-                    body=attribution + post.bodyMarkdown)   
+                    body=attribution + rewrite_image_urls(post.bodyMarkdown))   
                 discussion_tokens[post.id] = result     
 
                 if post.acceptedAnswerId is not None and post.acceptedAnswerId > 0:
@@ -122,7 +137,7 @@ def main():
                     repository_id=repo_id,
                     category_id=articles_category_id,
                     title=post.title,
-                    body=attribution + post.bodyMarkdown)  
+                    body=attribution + rewrite_image_urls(post.bodyMarkdown))  
 
 
         # Assumption (tagWki and takWikiExcerpt contain little value)
