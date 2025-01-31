@@ -1,6 +1,7 @@
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 import time
+from gql.transport.exceptions import TransportQueryError
 
 class RateLimitedTransport(RequestsHTTPTransport):
     def __init__(self, *args, **kwargs):
@@ -57,7 +58,30 @@ class GitHubDiscussionsClient:
 
     def execute_query(self, query, variables=None):
         self._wait_if_rate_limited()
-        return self.client.execute(query, variable_values=variables)            
+        return self.client.execute(query, variable_values=variables)   
+
+    def execute_query(self, query, variables=None):
+        max_retries = 4
+        attempt = 0
+        
+        while attempt < max_retries:
+            try:
+                self._wait_if_rate_limited()
+                return self.client.execute(query, variable_values=variables)
+            except Exception as e:
+                if "was submitted too quickly" in str(e):
+                    print(f"Rate limit error detected. Retrying...")
+                    attempt += 1
+                    if attempt < max_retries:
+                        # Exponential backoff: 5s, 25s, 125s
+                        delay = 5 ** attempt
+                        print(f"Sleeping for {delay} seconds before retrying...")
+                        time.sleep(delay)
+                        continue
+                raise  # Re-raise if it's not a rate limit error or we're out of retries
+        
+        # If we get here, we've exhausted all retries
+        raise TransportQueryError("Failed after maximum retries due to rate limiting")             
 
     def create_discussion(self, repository_id, category_id, title, body):
         """Create a new discussion in the specified repository."""

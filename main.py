@@ -2,6 +2,7 @@ import argparse
 import sys
 from github_discussions_client import GitHubDiscussionsClient
 from stackoverflow_data_dump import *
+import traceback
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -89,6 +90,7 @@ def main():
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
+                
                 result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown, answer_ids.get(post.parentId,-1) == post.id)  
             elif post.postType == "article":
                 print(f"Skipping article: {post.title}")             
@@ -100,6 +102,8 @@ def main():
             
     except Exception as e:
         print(f"Error initializing client: {e}")
+        stack_trace = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+        print(stack_trace)        
         sys.exit(1)
 
 if __name__ == "__main__":
