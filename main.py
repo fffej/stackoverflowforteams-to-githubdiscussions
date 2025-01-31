@@ -74,7 +74,7 @@ def main():
 
                 attribution = ""
                 if post.ownerUserId != -1:
-                    attribution = f"Written by {users[post.ownerUserId].displayName})\n"
+                    attribution = f"Written by {users[post.ownerUserId].displayName}\n"
                 
                 result = client.create_discussion(
                     repository_id=repo_id,
