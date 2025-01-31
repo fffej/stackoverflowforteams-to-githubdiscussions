@@ -26,7 +26,7 @@ Example usage:
         help='Repository in format owner/name (e.g., octocat/Hello-World)',
         default=None
     )
-    
+
     return parser.parse_args()
 
 def get_qa_category_id(categories):
@@ -35,6 +35,17 @@ def get_qa_category_id(categories):
         if category['name'] == 'Q&A':
             return category['id']
     return None
+
+def get_articles_category_id(categories):
+    """Helper function to find the Q&A category ID."""
+    for category in categories["repository"]["discussionCategories"]["nodes"]:
+        if category['name'] == 'Articles':
+            return category['id']
+    return None
+
+# Slow, but fine for small lists
+def find_user_by_id(owner: str, repo:str, users: list[UserProfile], user_id: int) -> Optional[UserProfile]:
+    return next((user for user in users if user.id == user_id), None)
 
 def main():
     args = parse_args()
@@ -53,6 +64,10 @@ def main():
         if not qa_category_id:
             print("Error: Could not find Q&A category in the repository")
             sys.exit(1)       
+        articles_category_id = get_articles_category_id(categories)
+        if not articles_category_id:
+            print("Error: Could not find articles category in the repository")
+            sys.exit(1)       
 
         # Initialize the export data
         posts = load_stackoverflow_posts("data/posts.json")
@@ -68,13 +83,17 @@ def main():
         discussion_tokens = {}
         answer_ids = {}
 
+        process_questions_and_answers = False
+        process_articles = True
+
         for post in posts:
-            if post.postType == "question":
+            if process_questions_and_answers and post.postType == "question":
                 print(f"\nProcessing question: {post.title}")   
 
                 attribution = ""
-                if post.ownerUserId != -1:
-                    attribution = f"Written by {users[post.ownerUserId].displayName}\n"
+                maybeUser = find_user_by_id(users, post.ownerUserId)
+                if maybeUser is not None:                    
+                    attribution = f"Written by {maybeUser.displayName}\n"
                 
                 result = client.create_discussion(
                     repository_id=repo_id,
@@ -86,14 +105,25 @@ def main():
                 if post.acceptedAnswerId is not None and post.acceptedAnswerId > 0:
                     answer_ids[post.id] = post.acceptedAnswerId
 
-            elif post.postType == "answer":
+            elif process_questions_and_answers and post.postType == "answer":
                 parent_discussion = discussion_tokens.get(post.parentId)
                 if parent_discussion is None:
                     print(f"Error: Answer {post.id} has no parent discussion") 
                 
                 result = client.create_comment(parent_discussion['createDiscussion']['discussion']['id'], post.bodyMarkdown, answer_ids.get(post.parentId,-1) == post.id)  
-            elif post.postType == "article":
-                print(f"Skipping article: {post.title}")             
+            elif process_articles and post.postType == "article":
+                print(f'Processing article: {post.title}')
+                attribution = ""
+                maybeUser = find_user_by_id(users, post.ownerUserId)
+                if maybeUser is not None:                    
+                    attribution = f"Written by {maybeUser.displayName}\n"
+                                
+                result = client.create_discussion(
+                    repository_id=repo_id,
+                    category_id=articles_category_id,
+                    title=post.title,
+                    body=attribution + post.bodyMarkdown)  
+
 
         # Assumption (tagWki and takWikiExcerpt contain little value)
         # What about collection?
