@@ -1,25 +1,63 @@
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
-from ratelimit import limits, sleep_and_retry
-import os
+import time
+
+class RateLimitedTransport(RequestsHTTPTransport):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.rate_limit_remaining = None
+        self.rate_limit_reset = None
+
+    def execute(self, document, variable_values=None, *args, **kwargs):
+        try:
+            response = super().execute(document, variable_values, *args, **kwargs)
+
+            # Extract rate limit headers from the raw HTTP response
+            http_response = self.session.post(self.url, json={"query": str(document)}, headers=self.headers)
+            rate_limit_headers = http_response.headers
+
+            # Extract and convert rate limit values, handling potential missing headers
+            self.rate_limit_remaining = int(rate_limit_headers.get("x-ratelimit-remaining", -1))
+            self.rate_limit_reset = int(rate_limit_headers.get("x-ratelimit-reset", -1))
+
+            print(f"Rate Limit Remaining: {self.rate_limit_remaining}")
+            print(f"Rate Limit Reset Time (Epoch): {self.rate_limit_reset}")
+
+            return response
+
+        except Exception as e:
+            print(f"Error while executing query: {e}")
+            raise
 
 class GitHubDiscussionsClient:
 
-    CALLS_PER_HOUR = 5000
-
     def __init__(self, token):
-        # Initialize the GraphQL client
-        transport = RequestsHTTPTransport(
+        self.transport = RateLimitedTransport(
             url='https://api.github.com/graphql',
             headers={'Authorization': f'Bearer {token}'}
         )
-        self.client = Client(transport=transport, fetch_schema_from_transport=True)
+        self.client = Client(transport=self.transport, fetch_schema_from_transport=True)
 
-    # TODO: Almost certainly need to capture rate limiting here and retry? (since I've guessed at the amount)
-    @sleep_and_retry
-    @limits(calls=CALLS_PER_HOUR, period=3600)
-    def _execute_query(self, query, variables=None):
-        return self.client.execute(query, variable_values=variables)    
+    def _wait_if_rate_limited(self):
+        if self.transport.rate_limit_remaining is None or self.transport.rate_limit_reset is None:
+            print(f"Rate limit headers not received; proceeding cautiously.")
+            return
+
+        if self.transport.rate_limit_remaining == -1 or self.transport.rate_limit_reset == -1:
+            print(f"Rate limit headers missing or invalid. Assuming API limits are unknown.")
+            return
+
+        if self.transport.rate_limit_remaining == 0:
+            reset_time = self.transport.rate_limit_reset
+            sleep_time = max(reset_time - time.time(), 1)
+            print(f"Rate limit exceeded. Sleeping for {sleep_time:.2f} seconds (until reset).")
+            time.sleep(sleep_time)
+        else:
+            print(f"Proceeding with API call. {self.transport.rate_limit_remaining} calls remaining.")
+
+    def execute_query(self, query, variables=None):
+        self._wait_if_rate_limited()
+        return self.client.execute(query, variable_values=variables)            
 
     def create_discussion(self, repository_id, category_id, title, body):
         """Create a new discussion in the specified repository."""
@@ -43,7 +81,7 @@ class GitHubDiscussionsClient:
             }
         }
         
-        return self._execute_query(mutation, variables=variables)
+        return self.execute_query(mutation, variables=variables)
 
     def get_discussion_categories(self, owner, name):
         """Get available discussion categories for a repository."""
@@ -66,7 +104,7 @@ class GitHubDiscussionsClient:
             "name": name
         }
         
-        return self._execute_query(query, variables=variables)
+        return self.execute_query(query, variables=variables)
 
     def get_repository_id(self, owner, name):
         """Get the GitHub repository ID."""
@@ -83,7 +121,7 @@ class GitHubDiscussionsClient:
             "name": name
         }
         
-        return self._execute_query(query, variables=variables)
+        return self.execute_query(query, variables=variables)
 
     def create_comment(self, discussion_id, body, is_answer=False):
         """
@@ -116,7 +154,7 @@ class GitHubDiscussionsClient:
         }
         
         # Create the comment first
-        result = self._execute_query(mutation, variables=variables)
+        result = self.execute_query(mutation, variables=variables)
         
         # If this comment should be marked as the answer, make a second call
         if is_answer and result.get('addDiscussionComment', {}).get('comment', {}).get('id'):
@@ -137,6 +175,6 @@ class GitHubDiscussionsClient:
             }
             
             # Mark the comment as the answer
-            self._execute_query(mark_answer_mutation, variables=mark_variables)
+            self.execute_query(mark_answer_mutation, variables=mark_variables)
         
         return result

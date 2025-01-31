@@ -82,7 +82,7 @@ def main():
                     body=attribution + post.bodyMarkdown)   
                 discussion_tokens[post.id] = result     
 
-                if post.acceptedAnswerId > 0:
+                if post.acceptedAnswerId is not None and post.acceptedAnswerId > 0:
                     answer_ids[post.id] = post.acceptedAnswerId
 
             elif post.postType == "answer":
